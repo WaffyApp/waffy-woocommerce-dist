@@ -45,6 +45,14 @@ Take the `waffy-woocommerce-<version>.zip` asset. Ignore GitHub's automatic
 **Source code (zip)** and **(tar.gz)** entries — those are archives of the
 distribution repo, not the plugin, and WordPress will reject them.
 
+Every release also carries a version-less `waffy-woocommerce.zip` with
+identical contents, if you'd rather always fetch the current version from one
+unchanging address:
+
+```
+https://github.com/WaffyApp/waffy-woocommerce-dist/releases/latest/download/waffy-woocommerce.zip
+```
+
 ### 2.2 Upload it (recommended)
 
 1. In WP Admin, go to **Plugins → Add New → Upload Plugin**.
