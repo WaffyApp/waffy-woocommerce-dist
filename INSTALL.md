@@ -26,7 +26,7 @@ Supports both the **classic** and the **Blocks (Gutenberg)** checkout, and
 | PHP extensions | `ext-json`, `ext-openssl` (standard on any WooCommerce host) |
 | Permalinks | Any setting **other than "Plain"** — see §3.2 |
 | Access | WordPress admin, with the `install_plugins` capability (Administrator) |
-| Waffy credentials | Client ID, Client Secret, admin email & password — request from **support@waffyapp.com** |
+| Waffy client | An API client created in the Waffy portal, its env file, client secret and admin password |
 
 Unlike Magento, **no command-line access is required**. The whole install is
 done from the WordPress admin.
@@ -81,78 +81,63 @@ If the admin uploader is disabled or you prefer file access:
 
 ### 2.4 Verify it activated
 
-Go to **Plugins** — the entry should show as active. If WooCommerce is missing
-or too old, or PHP is below 8.1, the plugin stays inactive and prints an admin
-notice explaining which requirement failed.
+Go to **Plugins** — the entry should show as active.
+
+If something is missing, what you see depends on which requirement it is:
+
+- **PHP below 8.1, or WordPress below 6.0** — WordPress refuses to activate the
+  plugin at all and shows its own error. This is enforced by WordPress from the
+  plugin header, not by the plugin.
+- **WooCommerce not installed or not active** — the plugin *does* activate, but
+  it shows an admin notice and does not register the payment method. Install or
+  activate WooCommerce and the gateway appears.
+- **WooCommerce older than 8.0** — nothing blocks this. The plugin loads
+  normally, and WooCommerce may flag the version mismatch on the Plugins
+  screen. Treat 8.0 as the supported floor, not an enforced one.
 
 ---
 
 ## 3. Configuration
 
-Go to **WooCommerce → Settings → Payments → Waffy Escrow Payment**.
+Go to **WooCommerce → Settings → Payments → Waffy Escrow Payment**. The top of
+the screen is the **Waffy setup wizard**; any step can be reopened later.
 
-### 3.1 Connect your Waffy account
+### 3.1 Create your Waffy client
 
-1. **Environment** — set to **Sandbox** first for testing (no real money).
-   Sandbox and Production have separate credential fields, so you can fill both
-   and switch between them without re-entering anything.
-2. Enter the **Sandbox Client ID**, **Client Secret**, **Client Admin Email**,
-   and **Client Admin Password** provided by Waffy.
-3. **Merchant Phone Number** *(required)* — E.164 format, e.g. `+966555555555`.
-   This identifies the merchant as the PROVIDER party on every escrow contract.
-4. *(Optional)* **Broker Phone Number** — leave empty if no broker is involved.
+Choose **Sandbox** (testing, no real money) or **Live**. Then, in the Waffy
+portal — `https://portal-dev.waffyapp.com` for Sandbox,
+`https://portal.waffyapp.com` for Live — set up your organization if you have
+not already, create an API client for WooCommerce, and download its **env
+file**. Keep the client's **secret** at hand: the file does not include it.
 
-> Secrets and passwords are stored **encrypted** (AES-256-GCM). Once saved, the
-> fields show blank — leaving them blank on a later save keeps the current
-> value rather than clearing it.
+### 3.2 Connect
 
-### 3.2 Register your webhook with Waffy
+Upload the env file, **or** type the values (client ID, admin username — a mobile or an email,
+organization account ID). Either way, enter the **client secret** and the
+**admin password**, then **Save**.
 
-1. Copy the **Webhook URL** shown in the settings. It looks like:
+The banner shows which environment you are setting up. A Sandbox file (its
+addresses contain `dev` or `stg`) is refused while Live is selected, and vice
+versa — use the *Switch* link the wizard offers.
 
-   ```
-   https://your-store.com/wp-json/waffy/v1/webhook
-   ```
+> Secrets are stored **encrypted** (AES-256-GCM). When you edit the connection
+> later, leaving a secret blank keeps the saved one — for the same client only.
 
-2. Send that URL to the Waffy team so they register your store for order status
-   updates. **Order status will never update until this is done.**
-3. *(Optional)* **Webhook Allowed IPs** — leave empty to allow all. To restrict,
-   enter one IP or CIDR range per line (e.g. `203.0.113.0/24`); anything else
-   gets a 403. Ask Waffy for their server IPs before turning this on.
+### 3.3 Verify & activate
 
-> **Permalinks matter.** The webhook is a WordPress REST route. If
-> **Settings → Permalinks** is set to **Plain**, the pretty `/wp-json/` URL does
-> not work and the settings page will show the fallback
-> `?rest_route=/waffy/v1/webhook` form instead. Either is fine as long as you
-> send Waffy exactly the URL the settings page displays — but any non-Plain
-> permalink structure is recommended.
+Click **Run checks and activate**. The wizard checks the client and admin
+credentials with Waffy, reads your client's settings, and **registers your
+store's webhook URL with Waffy** — no need to send it to anyone. When every
+check passes, the connection becomes active and the payment method is switched
+on. Until then your previous connection (if any) keeps working.
 
-### 3.3 Contract settings
-
-Match these to how you sell:
-
-| Setting | Meaning |
-|---------|---------|
-| **Return Policy** | `No Return` or `Returnable` |
-| **Return Fee Payee** | Who pays the return fee — Merchant (Provider) or Customer |
-| **Is Deliverable** | Product requires physical delivery |
-| **Is Inspectable** | Buyer may inspect goods before funds are released |
-| **Is Acceptable (by Customer)** | Buyer explicitly accepts/rejects before release |
-| **Milestone Deadline (days)** | Days from order date until the payment milestone expires |
-| **Contract Category** | Category shown to the buyer on the Waffy page (e.g. Services, Electronics, Food) |
+> **Permalinks matter.** The webhook is a WordPress REST route; any non-Plain
+> permalink structure is recommended (**Settings → Permalinks**).
 
 ### 3.4 Storefront settings
 
-1. **Title** — what buyers see at checkout (default "Pay with Waffy").
-2. **Description** — the explanatory line under the title at checkout.
-3. Tick **Enable Waffy Escrow Payment**.
-4. Click **Save changes**.
-
-Leave everything under **Advanced** empty. Those URL overrides are derived
-automatically from the Environment setting and exist only for pointing at a
-custom or staging Waffy server.
-
----
+Below the wizard: **Title** (what buyers see at checkout) and **Description**.
+Click **Save changes** after editing them.
 
 ## 4. Test in Sandbox
 
@@ -218,11 +203,10 @@ historical record.
 | Plugin won't activate | Check the admin notice — usually WooCommerce inactive/too old, or PHP below 8.1 |
 | "Waffy" not shown at checkout | Confirm **Enable Waffy Escrow Payment** is ticked and the settings were saved |
 | Order stuck on **On hold** | The webhook never arrived. Confirm the Webhook URL was registered with Waffy and isn't blocked by the IP allowlist or a firewall/WAF |
-| Webhook returns 403 | The caller's IP isn't in **Webhook Allowed IPs**. Clear the field to allow all, or add Waffy's IPs |
 | Webhook returns 404 | Permalinks are set to **Plain**, or a security plugin is blocking `/wp-json/`. See §3.2 |
 | Checkout is slow on the first order | Token warm-up hasn't run yet. Harmless — the SDK fetches what's missing. Confirm WP-Cron is working |
-| Credentials seem not to save | Secret/password fields intentionally display blank after saving. Re-entering is only needed to change them |
-| Admin notice: "stored ... could not be read" | The site's WordPress security keys/salts changed (common after a migration or a host "security reset"), so the encrypted secrets can't be decrypted. Re-enter and save the credentials |
+| A wizard check fails | The failing line says which credential Waffy refused, with Waffy's message. Fix it in step 2 and run the checks again |
+| Admin notice: "stored ... could not be read" | The site's WordPress security keys/salts changed (common after a migration or a host "security reset"), so the encrypted secrets can't be decrypted. Run the setup wizard again |
 
 ### The call log
 
