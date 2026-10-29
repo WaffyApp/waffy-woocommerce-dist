@@ -2,7 +2,7 @@
 
 **Plugin:** Waffy Escrow Payment for WooCommerce
 **Plugin slug:** `waffy-woocommerce`
-**Version:** 0.3.0
+**Version:** 0.4.0
 **License:** GPL-2.0-or-later
 
 Compatible with **WordPress 6.0+** and **WooCommerce 8.0+**, on **PHP 8.1+**.
@@ -24,7 +24,7 @@ Supports both the **classic** and the **Blocks (Gutenberg)** checkout, and
 | WooCommerce | 8.0 or higher (active) |
 | PHP | 8.1 or higher |
 | PHP extensions | `ext-json`, `ext-openssl` (standard on any WooCommerce host) |
-| Permalinks | Any setting **other than "Plain"** — see §3.2 |
+| Permalinks | Any setting **other than "Plain"** — see §3.3 |
 | Access | WordPress admin, with the `install_plugins` capability (Administrator) |
 | Waffy client | An API client created in the Waffy portal, its env file, client secret and admin password |
 
@@ -56,7 +56,7 @@ https://github.com/WaffyApp/waffy-woocommerce-dist/releases/latest/download/waff
 ### 2.2 Upload it (recommended)
 
 1. In WP Admin, go to **Plugins → Add New → Upload Plugin**.
-2. Click **Choose File**, select `waffy-woocommerce-0.3.0.zip`, then
+2. Click **Choose File**, select the `waffy-woocommerce-<version>.zip` you downloaded, then
    **Install Now**.
 3. Click **Activate Plugin**.
 
@@ -64,7 +64,7 @@ That's it — the plugin creates its encrypted token-cache table
 (`wp_waffy_tokens`) and schedules its background token refresh on activation.
 
 > **"The uploaded file exceeds the upload_max_filesize directive"** — the zip is
-> roughly 700 KB, well under any normal limit, but some hosts cap uploads very
+> roughly 500 KB, well under any normal limit, but some hosts cap uploads very
 > low. If you hit this, use the SFTP method below or ask your host to raise
 > `upload_max_filesize`.
 
@@ -72,7 +72,7 @@ That's it — the plugin creates its encrypted token-cache table
 
 If the admin uploader is disabled or you prefer file access:
 
-1. Unzip `waffy-woocommerce-0.3.0.zip` locally. It contains a single top-level
+1. Unzip `waffy-woocommerce-<version>.zip` locally. It contains a single top-level
    folder, `waffy-woocommerce/`.
 2. Upload that whole folder into `wp-content/plugins/` so you end up with
    `wp-content/plugins/waffy-woocommerce/waffy-woocommerce.php`.
@@ -155,12 +155,13 @@ Test both the classic and the Blocks checkout if your store offers both.
 
 ## 5. Go live
 
-1. Set **Environment → Production**.
-2. Enter your **Production** Client ID, Client Secret, Admin Email & Password.
-3. If your store URL changed (e.g. staging → live domain), re-share the new
-   **Webhook URL** with Waffy — it is derived from the site URL.
-4. **Save changes**.
-5. Place one small real order to confirm end to end.
+1. Open the setup wizard, choose **Live** in step 1, and create a live client
+   in `https://portal.waffyapp.com`.
+2. Upload the live env file in step 2 and run the checks in step 3.
+3. If your store URL changes later (e.g. staging → live domain), run step 3
+   again — the webhook URL is derived from the site URL, and the checks
+   register the new one with Waffy.
+4. Place one small real order to confirm end to end.
 
 ---
 
@@ -168,6 +169,11 @@ Test both the classic and the Blocks checkout if your store offers both.
 
 Settings and cached tokens survive an update; they live in WordPress options
 and the `wp_waffy_tokens` table, not in the plugin folder.
+
+> **Upgrading from 0.3.x or earlier?** Version 0.4.0 connects through Waffy ID
+> and needs the env file from the Waffy portal. The old credentials have no
+> organization account ID, so they don't carry over as a working connection:
+> Waffy stays hidden at checkout until you run the setup wizard (§3) once.
 
 **Via the admin uploader:** go to **Plugins → Add New → Upload Plugin**, choose
 the newer zip, and click **Install Now**. WordPress detects the existing copy
@@ -201,9 +207,9 @@ historical record.
 | Symptom | Fix |
 |---------|-----|
 | Plugin won't activate | Check the admin notice — usually WooCommerce inactive/too old, or PHP below 8.1 |
-| "Waffy" not shown at checkout | Confirm **Enable Waffy Escrow Payment** is ticked and the settings were saved |
-| Order stuck on **On hold** | The webhook never arrived. Confirm the Webhook URL was registered with Waffy and isn't blocked by the IP allowlist or a firewall/WAF |
-| Webhook returns 404 | Permalinks are set to **Plain**, or a security plugin is blocking `/wp-json/`. See §3.2 |
+| "Waffy" not shown at checkout | Run the checks in the setup wizard (§3.3) — the method is switched on only when every check passes |
+| Order stuck on **On hold** | The webhook never arrived. Run the checks in the setup wizard again — the last one registers the webhook URL with Waffy — and confirm a firewall/WAF isn't blocking it |
+| Webhook returns 404 | Permalinks are set to **Plain**, or a security plugin is blocking `/wp-json/`. See §3.3 |
 | Checkout is slow on the first order | Token warm-up hasn't run yet. Harmless — the SDK fetches what's missing. Confirm WP-Cron is working |
 | A wizard check fails | The failing line says which credential Waffy refused, with Waffy's message. Fix it in step 2 and run the checks again |
 | Admin notice: "stored ... could not be read" | The site's WordPress security keys/salts changed (common after a migration or a host "security reset"), so the encrypted secrets can't be decrypted. Run the setup wizard again |
